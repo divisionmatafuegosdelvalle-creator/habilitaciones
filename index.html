@@ -153,8 +153,13 @@ button.danger-fill { background: var(--bad-solid); border-color: var(--bad-solid
 .syncchip.wait { background: var(--warn-bg); color: var(--warn); }
 .syncchip.off { background: var(--bad-bg); color: var(--bad); }
 body.insp .nav, body.insp .statusbar { display: none; }
-body.insp #insp-login-wrap { display: block; }
+body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: none !important; }
 #insp-login-wrap { display: none; text-align: center; margin-top: 8px; }
+.mhead { margin: 18px 0 2px; font: 700 20px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--fire); display: flex; justify-content: space-between; gap: 8px; border-bottom: 2px solid var(--line); padding-bottom: 6px; }
+.mhead small { font: 600 14px/1 var(--body); letter-spacing: 0; text-transform: none; color: var(--ink-soft); }
+.prow { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+.prow label { min-width: 0; }
+.prow input { min-width: 0; width: 100%; }
 [hidden]{display:none!important}img{max-width:100%}</style>
 </head><body>
 
@@ -180,7 +185,7 @@ body.insp #insp-login-wrap { display: block; }
         </ol>
         <p>Seguí este orden:</p>
         <div class="words" aria-label="Palabras para dictar, en orden"><span>número de orden</span><span>propietario</span><span>DNI</span><span>teléfono</span><span>matafuego número</span><span>capacidad</span><span>marca</span><span>tipo de carga</span><span>prueba hidráulica</span></div>
-        <p>Para otro matafuego en la misma orden, volvé a decir "matafuego número". Después tocá el botón naranja.</p>
+        <p>Para otro matafuego en la misma orden, volvé a decir "matafuego número" o "matafuego 2 número de serie". Después tocá el botón naranja.</p>
       </div>
       <textarea id="dict" class="dictbox" aria-label="Texto dictado" placeholder="Tocá acá y dictá. Ejemplo: número de orden 19421, propietario Juan Pérez, matafuego número 170360, capacidad 5 kilos, marca Geomix, tipo de carga ABC, prueba hidráulica marzo 2029."></textarea>
       <div class="actions">
@@ -229,8 +234,8 @@ body.insp #insp-login-wrap { display: block; }
     <div class="panel">
       <h2>Historial <span id="h-count"></span></h2>
       <div class="grid">
-        <label>Buscar<input id="h-q" type="search" placeholder="Nombre o N° de matafuego" autocomplete="off"></label>
-        <label>Orden<select id="h-sort"><option value="recent">Más recientes</option><option value="due">Vencen primero</option></select></label>
+        <label>Buscar<input id="h-q" type="search" placeholder="Nombre, N° de matafuego o teléfono" autocomplete="off"></label>
+        <label>Mes de vencimiento<select id="h-month"><option value="">Todos los meses</option></select></label>
       </div>
       <div id="h-list"></div>
       <p class="hint">Para anular una habilitación (solo el dueño), mantenela apretada.</p>
@@ -242,7 +247,7 @@ body.insp #insp-login-wrap { display: block; }
   <section id="tab-verificar" class="stack" hidden>
     <div id="v-out" class="stack"></div>
     <div id="insp-login-wrap"><button id="insp-login" class="small">Entrar al sistema del taller</button></div>
-    <div class="panel">
+    <div class="panel" id="v-panel">
       <h2>Verificar una habilitación</h2>
       <p class="hint">Al escanear el QR con la cámara del teléfono se abre esta pantalla sola. También podés pegar acá el enlace del QR.</p>
       <textarea id="v-in" aria-label="Enlace del QR" placeholder="Pegá el enlace del QR"></textarea>
@@ -288,7 +293,7 @@ body.insp #insp-login-wrap { display: block; }
     <div class="panel">
       <h2>Datos del taller</h2>
       <div class="grid">
-        <label class="wide">Dirección de esta app (la que abre el QR)<input id="s-base" inputmode="url" placeholder="https://tu-sitio.com/habilitaciones/" autocomplete="off"></label>
+        <label class="wide">Dirección de esta app (la que abre el QR)<input id="s-base" inputmode="url" placeholder="Se completa sola con la dirección de la app" autocomplete="off"></label>
         <label>Habilitación municipal<input id="s-muni" autocomplete="off"></label>
         <label>Teléfonos<input id="s-phones" autocomplete="off"></label>
         <label>Calle<input id="s-addr1" autocomplete="off"></label>
@@ -303,8 +308,14 @@ body.insp #insp-login-wrap { display: block; }
         <label>Alias<input id="s-alias" autocomplete="off" placeholder="mi.alias.mp"></label>
         <label>Titular de la cuenta<input id="s-titular" autocomplete="off"></label>
         <label class="wide">Link de pago (opcional)<input id="s-link" inputmode="url" autocomplete="off" placeholder="https://mpago.la/..."></label>
-        <label>Precio Servi ($)<input id="s-pservi" inputmode="numeric" autocomplete="off"></label>
-        <label>Precio Recarga ($)<input id="s-precarga" inputmode="numeric" autocomplete="off"></label>
+      </div>
+      <h3 style="margin:14px 0 4px;font:700 18px var(--display);letter-spacing:.05em;text-transform:uppercase">Precios por tamaño</h3>
+      <p class="hint">Escribí los kilos y el precio de cada servicio. El cupón suma solo el total de todos los matafuegos de la orden.</p>
+      <div id="pr-rows"></div>
+      <button id="pr-add" class="small" type="button">Agregar tamaño</button>
+      <div class="grid" style="margin-top:12px">
+        <label>Servi, si el tamaño no está en la lista ($)<input id="s-pservi" inputmode="numeric" autocomplete="off"></label>
+        <label>Recarga, si el tamaño no está en la lista ($)<input id="s-precarga" inputmode="numeric" autocomplete="off"></label>
       </div>
       <p class="hint">Si cargás un link de pago de Mercado Pago, el cupón lleva un QR para pagar con un toque.</p>
       <button id="btn-save-set2" class="primary">Guardar ajustes</button>
@@ -312,9 +323,11 @@ body.insp #insp-login-wrap { display: block; }
     <div class="panel">
       <h2>Avisos de vencimiento</h2>
       <div class="grid">
-        <label>Primer aviso (días antes)<input id="s-av1" inputmode="numeric" autocomplete="off"></label>
-        <label>Segundo aviso (días antes)<input id="s-av2" inputmode="numeric" autocomplete="off"></label>
+        <label>Primer aviso desde el día<input id="s-av1" inputmode="numeric" autocomplete="off"></label>
+        <label>Segundo aviso desde el día<input id="s-av2" inputmode="numeric" autocomplete="off"></label>
+        <label class="wide">Dejar de avisar (días antes de que termine el mes)<input id="s-avend" inputmode="numeric" autocomplete="off"></label>
       </div>
+      <p class="hint">Los avisos son para las habilitaciones que vencen en el mes. Primer aviso desde el día 10 hasta el día anterior al segundo; segundo aviso hasta el penúltimo día del mes (1 día antes del fin).</p>
       <button id="btn-save-set3" class="primary">Guardar ajustes</button>
     </div>
     <div class="panel">
@@ -375,7 +388,7 @@ body.insp #insp-login-wrap { display: block; }
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.1</p>
+  <p class="hint">Versión 4.3</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -439,6 +452,7 @@ const KEYS = [
   ['type', ['tipo de carga', 'tipo carga', 'carga', 'tipo']],
   ['ph', ['vencimiento de la prueba hidráulica', 'vencimiento de la prueba hidraulica', 'vencimiento de prueba hidráulica', 'vencimiento de prueba hidraulica', 'vencimiento prueba hidráulica', 'vencimiento prueba hidraulica', 'vencimiento de ph', 'vencimiento ph', 'vencimiento de p.h.', 'vencimiento p.h.', 'venc ph', 'venc. ph', 'prueba hidráulica', 'prueba hidraulica', 'p.h.', 'p. h.', 'p h', 'ph']],
   ['obs', ['observación', 'observacion', 'servicio']],
+  ['brk', ['xitemx']],
   ['skip', ['vencimiento de carga', 'vencimiento carga', 'fecha de vencimiento', 'vencimiento', 'fecha']]
 ];
 const PHR = [];
@@ -510,12 +524,17 @@ function normVal(key, v) {
   }
 }
 // Devuelve { head: datos del cliente y la orden, items: [matafuegos] }. Cada "matafuego número" nuevo abre otro matafuego.
+// "matafuego 2 número de serie…", "segundo matafuego número…": el 2 es la cantidad, no el número de serie; solo abre otro matafuego
+const ORD = '(?:\\d{1,2}|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)';
+const RE_BRK = new RegExp('(?<![\\p{L}\\d])(?:(?:matafuegos?|extintor(?:es)?)\\s*(?:n[úu]mero|nro\\.?|n[°º])?\\s*' + ORD + '|(?:primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto)\\s+(?:matafuegos?|extintor))(?![\\p{L}\\d])\\s*[,.:;]?\\s*(?=(?:n[úu]mero|nro|n[°º]|serie))', 'giu');
 function parseOrder(text) {
   const head = {}, items = [];
   let cur = null;
+  text = text.replace(RE_BRK, ' xitemx ');
   const ms = [...text.matchAll(KEY_RE)];
   ms.forEach((m, i) => {
     const key = PHR_MAP[m[1].toLowerCase().replace(/\s+/g, ' ')];
+    if (key === 'brk') { cur = null; return; }
     if (!key || key === 'skip') return;
     const end = m.index + m[0].length;
     const next = i + 1 < ms.length ? ms[i + 1].index : text.length;
@@ -575,7 +594,7 @@ function cleanField(k, v) {
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } }
 const $ = id => document.getElementById(id);
-const DEFAULTS = { base: '', muni: '2122', phones: '387-4020718 / 387-4409084', addr1: 'LUIS BURELA 8', addr2: 'EL CARRIL -SALTA', mpAlias: '', mpTitular: '', mpLink: '', pServi: 10000, pRecarga: 20000, av1: 30, av2: 7 };
+const DEFAULTS = { base: '', muni: '2122', phones: '387-4020718 / 387-4409084', addr1: 'LUIS BURELA 8', addr2: 'EL CARRIL -SALTA', mpAlias: '', mpTitular: '', mpLink: '', pServi: 10000, pRecarga: 20000, avD1: 10, avD2: 21, avEnd: 1, prices: [{ kg: 1, servi: 10000, recarga: 20000 }, { kg: 2.5, servi: 10000, recarga: 20000 }, { kg: 5, servi: 10000, recarga: 20000 }, { kg: 10, servi: 10000, recarga: 20000 }] };
 let settings = Object.assign({}, DEFAULTS, lsGet('hab.settings', {}));
 let hist = lsGet('hab.history', []);
 let pending = [];
@@ -589,7 +608,7 @@ function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad(d
 function fmtDate(iso) { const [y, m, d] = iso.split('-'); return d + '/' + m + '/' + y; }
 function baseUrl() {
   if (settings.base) return settings.base.split('#')[0];
-  if (/^https?:/.test(location.href)) return location.href.split('#')[0];
+  if (/^https?:/.test(location.href)) return location.href.split('#')[0].split('?')[0];
   return 'https://tu-sitio.com/habilitaciones/';
 }
 function baseIsSet() { return !!settings.base || /^https?:/.test(location.href); }
@@ -837,15 +856,38 @@ $('btn-gen').onclick = async () => {
 };
 
 /* ===== historial ===== */
+const MES_N = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const foldTxt = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const mkey = r => { const v = vencFrom(r.emision); return v.anio * 100 + v.mes; };
+const mlabel = k => MES_N[(k % 100) - 1] + ' ' + Math.floor(k / 100);
+function fillMonths() {
+  const cnt = {}; hist.forEach(r => { cnt[mkey(r)] = (cnt[mkey(r)] || 0) + 1; });
+  const ks = Object.keys(cnt).map(Number).sort((x, y) => x - y);
+  const sig = ks.map(k => k + ':' + cnt[k]).join(',');
+  const sel = $('h-month'); if (sel.dataset.sig === sig) return;
+  const cur = sel.value; sel.dataset.sig = sig; sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Todos los meses'; sel.appendChild(o0);
+  ks.forEach(k => { const o = document.createElement('option'); o.value = String(k); o.textContent = mlabel(k) + ' (' + cnt[k] + ')'; sel.appendChild(o); });
+  sel.value = ks.map(String).includes(cur) ? cur : '';
+}
 function renderHistory() {
-  const q = $('h-q').value.trim().toLowerCase();
-  let list = hist.filter(r => !q || (r.owner + ' ' + r.number).toLowerCase().includes(q));
-  const due = r => { const v = vencFrom(r.emision); return endMs(v.mes, v.anio); };
-  list = list.slice().sort($('h-sort').value === 'due' ? (a, b) => due(a) - due(b) : (a, b) => b.created - a.created);
-  $('h-count').textContent = hist.length ? '(' + hist.length + ')' : '';
+  fillMonths();
+  const toks = foldTxt($('h-q').value).split(/\s+/).filter(Boolean), mf = $('h-month').value;
+  let list = hist.filter(r => (!mf || String(mkey(r)) === mf) && toks.every(w => foldTxt(r.owner + ' ' + r.number + ' ' + (r.phone || '') + ' ' + (r.dni || '')).includes(w)));
+  list = list.slice().sort((x, y) => mkey(x) - mkey(y) || foldTxt(x.owner).localeCompare(foldTxt(y.owner)) || String(x.number).localeCompare(String(y.number)));
+  const perMonth = {}; list.forEach(r => { perMonth[mkey(r)] = (perMonth[mkey(r)] || 0) + 1; });
+  let lastK = null;
+  $('h-count').textContent = hist.length ? (list.length === hist.length ? '(' + hist.length + ')' : '(' + list.length + ' de ' + hist.length + ')') : '';
   const box = $('h-list'); box.innerHTML = '';
   if (!list.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = hist.length ? 'Ninguna habilitación coincide con la búsqueda.' : 'Todavía no generaste habilitaciones. Las que generes aparecen acá, con su estado de vencimiento.'; box.appendChild(p); return; }
   list.forEach(r => {
+    if (mkey(r) !== lastK) {
+      lastK = mkey(r);
+      const mh = document.createElement('div'); mh.className = 'mhead';
+      const n = perMonth[lastK]; mh.innerHTML = '<span></span><small></small>';
+      mh.firstChild.textContent = mlabel(lastK); mh.lastChild.textContent = n + (n === 1 ? ' matafuego' : ' matafuegos');
+      box.appendChild(mh);
+    }
     const v = vencFrom(r.emision); const st = STATE_TXT(r);
     const row = document.createElement('div'); row.className = 'row'; row.tabIndex = 0; row.setAttribute('role', 'button');
     row.innerHTML = '<div class="t"><b></b><span></span></div><span class="chip ' + st.s + '">' + st.txt + '</span>';
@@ -895,7 +937,7 @@ $('dlg-ok').onclick = () => {
   closeDlg(); $('h-detail').hidden = true; renderHistory(); updateBadge();
 };
 $('h-q').addEventListener('input', renderHistory);
-$('h-sort').addEventListener('change', renderHistory);
+$('h-month').addEventListener('change', renderHistory);
 
 /* ===== PIN del dueño ===== */
 let auth = lsGet('hab.auth', null);
@@ -957,11 +999,30 @@ $('btn-pin-out').onclick = () => { ownerUntil = 0; show('nueva'); toast('Sesión
 
 /* ===== ajustes ===== */
 const SET_FIELDS = { base: 's-base', muni: 's-muni', phones: 's-phones', addr1: 's-addr1', addr2: 's-addr2', mpAlias: 's-alias', mpTitular: 's-titular', mpLink: 's-link' };
-const SET_NUMS = { pServi: 's-pservi', pRecarga: 's-precarga', av1: 's-av1', av2: 's-av2' };
+const SET_NUMS = { pServi: 's-pservi', pRecarga: 's-precarga', avD1: 's-av1', avD2: 's-av2', avEnd: 's-avend' };
+const selfUrl = () => (/^https?:/.test(location.href) ? location.href.split('#')[0].split('?')[0] : '');
+function priceRow(p) {
+  const d = document.createElement('div'); d.className = 'prow';
+  d.innerHTML = '<label>Kilos<input class="pk" inputmode="decimal" autocomplete="off"></label><label>Servi $<input class="ps" inputmode="numeric" autocomplete="off"></label><label>Recarga $<input class="pr" inputmode="numeric" autocomplete="off"></label><button class="small danger" type="button" aria-label="Quitar tamaño">✕</button>';
+  d.querySelector('.pk').value = p.kg == null ? '' : p.kg; d.querySelector('.ps').value = p.servi == null ? '' : p.servi; d.querySelector('.pr').value = p.recarga == null ? '' : p.recarga;
+  d.querySelector('button').onclick = () => d.remove();
+  return d;
+}
+function renderPrices() { const box = $('pr-rows'); box.innerHTML = ''; (settings.prices || []).forEach(p => box.appendChild(priceRow(p))); }
+$('pr-add').onclick = () => $('pr-rows').appendChild(priceRow({}));
+function readPrices() {
+  const out = [];
+  document.querySelectorAll('#pr-rows .prow').forEach(d => {
+    const kg = parseFloat(String(d.querySelector('.pk').value).replace(',', '.')), s = parseInt(String(d.querySelector('.ps').value).replace(/\D/g, ''), 10), r = parseInt(String(d.querySelector('.pr').value).replace(/\D/g, ''), 10);
+    if (kg > 0 && (s > 0 || r > 0)) out.push({ kg, servi: s || 0, recarga: r || 0 });
+  });
+  return out.sort((a, b) => a.kg - b.kg);
+}
 function fillSettings() {
   Object.keys(SET_FIELDS).forEach(k => { $(SET_FIELDS[k]).value = settings[k] || ''; });
   Object.keys(SET_NUMS).forEach(k => { $(SET_NUMS[k]).value = settings[k]; });
-  $('s-warn').hidden = baseIsSet();
+  if (!settings.base) $('s-base').value = selfUrl();
+  renderPrices(); $('s-warn').hidden = baseIsSet();
 }
 function saveSettings() {
   const b = $('s-base').value.trim(), l = $('s-link').value.trim();
@@ -970,7 +1031,9 @@ function saveSettings() {
   const next = {};
   Object.keys(SET_FIELDS).forEach(k => { next[k] = $(SET_FIELDS[k]).value.trim() || DEFAULTS[k]; });
   Object.keys(SET_NUMS).forEach(k => { const n = parseInt($(SET_NUMS[k]).value, 10); next[k] = isNaN(n) || n < 0 ? DEFAULTS[k] : n; });
-  if (next.av2 >= next.av1) { toast('El segundo aviso tiene que quedar más cerca del vencimiento que el primero.'); return; }
+  if (next.avD1 < 1 || next.avD2 > 28 || next.avD2 <= next.avD1) { toast('El segundo aviso tiene que empezar un día después del primero (entre el día 1 y el 28).'); return; }
+  if (next.avEnd > 5) { toast('Dejar de avisar: entre 0 y 5 días antes del fin de mes.'); return; }
+  next.prices = readPrices();
   settings = next; lsSet('hab.settings', settings); fillSettings(); updateBadge(); toast('Ajustes guardados');
 }
 ['btn-save-set', 'btn-save-set2', 'btn-save-set3'].forEach(id => { $(id).onclick = saveSettings; });
@@ -983,12 +1046,18 @@ $('btn-clear').onclick = () => {
 fillSettings(); renderPinPanel();
 
 /* ===== avisos de vencimiento (2 por habilitación) ===== */
+const artNow = now => { const a = new Date(now - 3 * 3600000); return { y: a.getUTCFullYear(), m: a.getUTCMonth() + 1, d: a.getUTCDate() }; };
+// Los avisos son del mes de vencimiento: 1º desde el día avD1, 2º desde el día avD2 hasta avEnd días antes de que termine el mes
 function noticeOf(r, now) {
   const v = vencFrom(r.emision), st = statusOf(v.mes, v.anio, now), sent = r.avisos || {};
+  const t = artNow(now), idx = v.anio * 12 + v.mes, cur = t.y * 12 + t.m, last = lastDay(v.mes, v.anio);
+  const endDay = Math.max(settings.avD2, last - settings.avEnd);
   let due = 0;
   if (st.s === 'vencida') { if (now - st.end <= 30 * 86400000 && !sent[3]) due = 3; }
-  else if (st.days <= settings.av2) due = sent[2] ? 0 : 2;
-  else if (st.days <= settings.av1) due = sent[1] ? 0 : 1;
+  else if (cur === idx) {
+    if (t.d >= settings.avD2 && t.d <= endDay) due = sent[2] ? 0 : 2;
+    else if (t.d >= settings.avD1 && t.d < settings.avD2) due = sent[1] ? 0 : 1;
+  }
   return { due, st, v, sent };
 }
 function noticeGroups() {
@@ -1006,12 +1075,12 @@ function noticeMsg(g) {
   const many = g.recs.length > 1;
   const mid = g.n === 3 ? (many ? 'Estos matafuegos ya vencieron: ' : 'Este matafuego ya venció: ') : (many ? 'Estos matafuegos están por vencer: ' : 'Este matafuego está por vencer: ');
   const lo = many ? 'los' : 'lo';
-  const fin = g.n === 3 ? ' Pasá por el taller para renovar' + lo + ' y tener la habilitación al día.' : g.n === 2 ? ' Es el último aviso: renová' + lo + ' esta semana para no quedar sin habilitación.' : ' Para renovar' + lo + ' a tiempo, pasá por el taller o avisanos.';
+  const fin = g.n === 3 ? ' Pasá por el taller para renovar' + lo + ' y tener la habilitación al día.' : g.n === 2 ? ' Es el último aviso: renová' + lo + ' antes de que termine el mes para no quedar sin habilitación.' : ' Para renovar' + lo + ' a tiempo, pasá por el taller o avisanos.';
   return 'Hola ' + g.owner + ', te escribimos de División Matafuegos Del Valle. ' + mid + lines + '.' + fin + ' ' + settings.addr1 + ', ' + settings.addr2 + '. Tel: ' + settings.phones;
 }
 const NOTICE_LBL = { 1: 'Primer aviso', 2: 'Segundo aviso', 3: 'Vencidos' };
 function renderAvisos() {
-  $('av-hint').textContent = 'Primer aviso ' + settings.av1 + ' días antes del vencimiento y segundo aviso ' + settings.av2 + ' días antes. Al tocar WhatsApp, el aviso queda marcado como enviado.';
+  $('av-hint').textContent = 'Habilitaciones que vencen este mes. Primer aviso del día ' + settings.avD1 + ' al ' + (settings.avD2 - 1) + ', segundo aviso desde el día ' + settings.avD2 + ' hasta ' + (settings.avEnd === 0 ? 'el último día' : settings.avEnd === 1 ? 'el penúltimo día' : settings.avEnd + ' días antes de fin de mes') + '. Al tocar WhatsApp, el aviso queda marcado como enviado.';
   const box = $('av-list'); box.innerHTML = '';
   const gs = noticeGroups();
   if (!gs.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'No hay avisos para enviar hoy.'; box.appendChild(p); }
@@ -1030,20 +1099,24 @@ function renderAvisos() {
     box.appendChild(row);
   });
   const nx = $('av-next'); nx.innerHTML = ''; const now = Date.now(), up = [];
+  const tn = artNow(now), curIdx = tn.y * 12 + tn.m;
   hist.forEach(r => {
-    if (r.anulada) return; const n = noticeOf(r, now); if (n.due || n.st.s === 'vencida') return;
-    const sent = n.sent; if (sent[2]) return;
-    const target = (!sent[1] && n.st.days > settings.av1) ? settings.av1 : settings.av2;
-    if (n.st.days <= target) return;
-    up.push({ r, at: n.st.end - target * 86400000, n: target === settings.av1 ? 1 : 2 });
+    if (r.anulada) return;
+    const n = noticeOf(r, now); if (n.due || n.st.s === 'vencida') return;
+    const sent = n.sent, idx = n.v.anio * 12 + n.v.mes; if (sent[2]) return;
+    let day = 0, num = 0;
+    if (idx > curIdx) { day = settings.avD1; num = 1; }
+    else if (idx === curIdx) { if (tn.d < settings.avD1) { day = settings.avD1; num = 1; } else if (tn.d < settings.avD2 && sent[1]) { day = settings.avD2; num = 2; } }
+    if (!num) return;
+    up.push({ r, at: Date.UTC(n.v.anio, n.v.mes - 1, day, 3), n: num });
   });
   up.sort((a, b) => a.at - b.at);
   if (!up.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Todavía no hay avisos programados.'; nx.appendChild(p); }
-  up.slice(0, 15).forEach(x => {
+  up.slice(0, 25).forEach(x => {
     const row = document.createElement('div'); row.className = 'row static';
     const t = document.createElement('div'); t.className = 't';
     const b = document.createElement('b'); b.textContent = x.r.owner;
-    const s = document.createElement('span'); s.textContent = (x.n === 1 ? 'Primer' : 'Segundo') + ' aviso el ' + new Date(x.at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · N° ' + x.r.number;
+    const s = document.createElement('span'); s.textContent = (x.n === 1 ? 'Primer' : 'Segundo') + ' aviso desde el ' + new Date(x.at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · N° ' + x.r.number;
     t.append(b, s); row.appendChild(t); nx.appendChild(row);
   });
 }
@@ -1052,7 +1125,12 @@ function renderAvisos() {
 let pays = lsGet('hab.pays', {});
 const batchOf = r => r.batch || r.id;
 const money = n => '$' + Number(n || 0).toLocaleString('es-AR');
-const priceOf = r => (r.obs === 'Recarga' ? settings.pRecarga : r.obs === 'Servi' ? settings.pServi : 0);
+const kgOf = cap => { const m = String(cap || '').replace(',', '.').match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : NaN; };
+const priceOf = r => {
+  const svc = r.obs === 'Recarga' ? 'recarga' : r.obs === 'Servi' ? 'servi' : null; if (!svc) return 0;
+  const row = (settings.prices || []).find(p => p.kg === kgOf(r.cap));
+  return row && row[svc] > 0 ? row[svc] : (svc === 'recarga' ? settings.pRecarga : settings.pServi);
+};
 const payTxt = r => { const p = pays[batchOf(r)]; return p ? (p.paid ? ' · Pagado' : ' · Debe ' + money(p.amount)) : ''; };
 let cpBatch = null;
 const cpRecs = () => hist.filter(x => batchOf(x) === cpBatch);
@@ -1076,7 +1154,7 @@ function openCoupon(r) {
   const ul = $('cp-lines'); ul.innerHTML = '';
   recs.forEach(x => {
     const li = document.createElement('li'), d = document.createElement('div'), s = document.createElement('div');
-    d.textContent = 'N° ' + x.number + ' · ' + (x.obs || 'Sin servicio indicado'); s.textContent = money(priceOf(x)); s.style.fontWeight = '700'; s.style.flex = '0 0 auto';
+    d.textContent = 'N° ' + x.number + ' · ' + (x.obs || 'Sin servicio indicado') + (x.cap ? ' · ' + x.cap : ''); s.textContent = money(priceOf(x)); s.style.fontWeight = '700'; s.style.flex = '0 0 auto';
     li.append(d, s); ul.appendChild(li);
   });
   $('cp-owner').textContent = recs[0].owner + (recs[0].orden ? ' · Orden N° ' + recs[0].orden : '');
@@ -1111,7 +1189,7 @@ async function drawCoupon(canvas, d) {
   c.fillText((first.orden ? 'Orden N° ' + first.orden + ' · ' : '') + 'Cupón ' + d.code + ' · ' + fmtDate(first.emision), 60, 582);
   let y = 655; const max = 6;
   d.recs.slice(0, max).forEach(r => {
-    const lab = 'N° ' + r.number + ' · ' + (r.obs || 'Servicio');
+    const lab = 'N° ' + r.number + ' · ' + (r.obs || 'Servicio') + (r.cap ? ' · ' + r.cap : '');
     c.fillStyle = '#fff'; c.textAlign = 'left'; fitFont(c, lab, 640, 38, 600); c.fillText(lab, 60, y);
     c.textAlign = 'right'; c.font = '600 38px ' + FAM; c.fillText(money(priceOf(r)), W - 60, y); y += 56;
   });
