@@ -108,6 +108,19 @@ canvas.card { width: 100%; max-width: 380px; height: auto; align-self: center; b
 .banner strong { font: 700 40px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
 .banner span { font-size: 15px; }
 .notice { border-left: 4px solid var(--amber); background: var(--surface-2); padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 14px; }
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg2 button { border: 0; border-radius: 0; min-height: 46px; background: var(--surface); color: var(--ink); }
+.seg2 button + button { border-left: 1.5px solid var(--line); }
+.seg2 button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.pprow { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pprow .wide { grid-column: 1 / -1; }
+.pprow p { margin: 0; font-size: 13px; color: var(--ink-soft); grid-column: 1 / -1; }
+.ppgrp { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.ppgrp:first-child { border-top: 0; }
+.ppgrp ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink-soft); }
+.ppgrp li { margin: 2px 0; }
+.ppacts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ppacts > * { flex: 1 1 0; }
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: #0b0b0b; display: flex; justify-content: center;
   padding-top: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
@@ -225,7 +238,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
         <label>Marca<input id="g-brand" autocomplete="off"></label>
         <label>Tipo de carga<input id="g-type" list="types" placeholder="ABC" autocomplete="off"></label>
         <label>Venc. P.H.<input id="g-ph" placeholder="03/2029" autocomplete="off"></label>
-        <label>Servicio<select id="g-obs"><option value="">—</option><option>Recarga</option><option>Servi</option></select></label>
+        <label>Servicio<select id="g-obs"><option value="">—</option><option>Recarga</option><option>Service</option></select></label>
       </div>
       <datalist id="types"><option>ABC</option><option>BC</option><option>CO2</option><option>Agua</option><option>Espuma</option><option>Polvo ABC</option></datalist>
       <dl class="readout" aria-live="polite">
@@ -268,6 +281,11 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
 
   <!-- AVISOS -->
   <section id="tab-avisos" class="stack" hidden>
+    <div class="seg2" role="group" aria-label="Tipo de avisos">
+      <button type="button" id="seg-hab" aria-pressed="true">Habilitaciones</button>
+      <button type="button" id="seg-pap" aria-pressed="false">Del papel <span id="pp-badge"></span></button>
+    </div>
+    <div id="av-hab" class="stack">
     <div class="panel">
       <h2>Avisos para enviar</h2>
       <p class="hint" id="av-hint"></p>
@@ -276,6 +294,31 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
     <div class="panel">
       <h2>Próximos avisos</h2>
       <div id="av-next"></div>
+    </div>
+    </div>
+    <div id="av-pap" class="stack" hidden>
+      <div class="panel">
+        <h2>Cargar clientes del papel</h2>
+        <p class="hint">Para los clientes de años anteriores que todavía no tienen habilitación digital. Cada matafuego es un registro; el aviso sale uno por cliente y por mes.</p>
+        <label>El mes que anotás es
+          <select id="pp-mode"><option value="vino">Cuando vino</option><option value="vence">Cuando vence</option></select>
+        </label>
+        <label>Dictá o escribí
+          <textarea id="pp-in" class="dictbox" placeholder="Juan Pérez 387 555 1234 noviembre 2025 número 4521 marca alba 5 kilos" autocomplete="off" spellcheck="false"></textarea>
+        </label>
+        <p class="hint">Decí nombre, teléfono y mes. Si querés distinguir los matafuegos, sumá «número», «marca», «tipo» y «kilos». Para varios, decí «nueva línea» entre uno y otro.</p>
+        <div id="pp-rows" class="stack"></div>
+        <button id="pp-save" class="primary" disabled>Guardar</button>
+        <p class="hint" id="pp-miss" hidden>Falta crear la tabla de clientes del papel en Supabase. Los datos quedan guardados en este teléfono hasta entonces.</p>
+      </div>
+      <div class="panel">
+        <h2>Clientes del papel <span id="pp-count"></span></h2>
+        <div class="grid">
+          <label>Mostrar<select id="pp-filter"><option value="avisar">Para avisar (vencidos y de este mes)</option><option value="proximo">Vencen el mes próximo</option><option value="enviados">Ya avisados</option><option value="todos">Todos</option></select></label>
+          <label>Buscar<input id="pp-q" type="search" placeholder="Nombre, N° o teléfono" autocomplete="off"></label>
+        </div>
+        <div id="pp-list"></div>
+      </div>
     </div>
   </section>
 
@@ -325,7 +368,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
       <div id="pr-rows"></div>
       <button id="pr-add" class="small" type="button">Agregar tamaño</button>
       <div class="grid" style="margin-top:12px">
-        <label>Servi, si el tamaño no está en la lista ($)<input id="s-pservi" inputmode="numeric" autocomplete="off"></label>
+        <label>Service, si el tamaño no está en la lista ($)<input id="s-pservi" inputmode="numeric" autocomplete="off"></label>
         <label>Recarga, si el tamaño no está en la lista ($)<input id="s-precarga" inputmode="numeric" autocomplete="off"></label>
       </div>
       <p class="hint">Si cargás un link de pago de Mercado Pago, el cupón lleva un QR para pagar con un toque.</p>
@@ -399,7 +442,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.7</p>
+  <p class="hint">Versión 4.9</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -521,6 +564,13 @@ function normPH(v) {
   if (y) return y;
   return v;
 }
+// 'servi', 'service', 'servis' → Service (así lo escribe el taller); 'recarga' → Recarga
+function normObs(v) {
+  const f = String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  if (/^servi(ce|s|ces|cio)?$/.test(f)) return 'Service';
+  if (/^recarg/.test(f)) return 'Recarga';
+  const s = String(v || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1);
+}
 function normVal(key, v) {
   switch (key) {
     case 'owner': case 'brand': case 'address': return titleCase(v);
@@ -530,7 +580,7 @@ function normVal(key, v) {
     case 'cap': return normCap(v);
     case 'type': return normType(v);
     case 'ph': return normPH(v);
-    case 'obs': return v.charAt(0).toUpperCase() + v.slice(1);
+    case 'obs': return normObs(v);
     default: return v;
   }
 }
@@ -869,7 +919,7 @@ function show(tab) {
   document.querySelectorAll('main > section').forEach(s => { s.hidden = s.id !== 'tab-' + tab; });
   document.querySelectorAll('.nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   if (tab === 'historial') { $('h-detail').hidden = true; renderHistory(); }
-  if (tab === 'avisos') renderAvisos();
+  if (tab === 'avisos') { ppShow($('av-pap').hidden ? 'hab' : 'pap'); ppBadge(); }
   window.scrollTo(0, 0);
 }
 // Ajustes pide el PIN del dueño cuando existe
@@ -1103,7 +1153,7 @@ const SET_NUMS = { pServi: 's-pservi', pRecarga: 's-precarga', avD1: 's-av1', av
 const selfUrl = () => (/^https?:/.test(location.href) ? location.href.split('#')[0].split('?')[0] : '');
 function priceRow(p) {
   const d = document.createElement('div'); d.className = 'prow';
-  d.innerHTML = '<label>Kilos<input class="pk" inputmode="decimal" autocomplete="off"></label><label>Servi $<input class="ps" inputmode="numeric" autocomplete="off"></label><label>Recarga $<input class="pr" inputmode="numeric" autocomplete="off"></label><button class="small danger" type="button" aria-label="Quitar tamaño">✕</button>';
+  d.innerHTML = '<label>Kilos<input class="pk" inputmode="decimal" autocomplete="off"></label><label>Service $<input class="ps" inputmode="numeric" autocomplete="off"></label><label>Recarga $<input class="pr" inputmode="numeric" autocomplete="off"></label><button class="small danger" type="button" aria-label="Quitar tamaño">✕</button>';
   d.querySelector('.pk').value = p.kg == null ? '' : p.kg; d.querySelector('.ps').value = p.servi == null ? '' : p.servi; d.querySelector('.pr').value = p.recarga == null ? '' : p.recarga;
   d.querySelector('button').onclick = () => d.remove();
   return d;
@@ -1141,7 +1191,7 @@ let clearArmed = false;
 $('btn-clear').onclick = () => {
   if (!clearArmed) { clearArmed = true; $('btn-clear').textContent = 'Tocá de nuevo para confirmar'; setTimeout(() => { clearArmed = false; $('btn-clear').textContent = 'Volver a bajar todo'; }, 4000); return; }
   if (outbox.length) { clearArmed = false; $('btn-clear').textContent = 'Volver a bajar todo'; toast('Hay cambios sin subir. Esperá a que se sincronicen.'); return; }
-  hist = []; saveHist(); pays = {}; savePays(); lastPull = { h: EPOCH, p: EPOCH }; lsSet('hab.lastpull', lastPull); clearArmed = false; $('btn-clear').textContent = 'Volver a bajar todo'; updateBadge(); syncNow(true);
+  hist = []; saveHist(); pays = {}; savePays(); prev = []; savePrev(); lastPull = { h: EPOCH, p: EPOCH, c: EPOCH }; lsSet('hab.lastpull', lastPull); clearArmed = false; $('btn-clear').textContent = 'Volver a bajar todo'; updateBadge(); syncNow(true);
 };
 fillSettings(); renderPinPanel();
 
@@ -1221,13 +1271,228 @@ function renderAvisos() {
   });
 }
 
+
+/* ===== clientes del papel (años anteriores) ===== */
+let prev = lsGet('hab.prev', []);
+const savePrev = () => lsSet('hab.prev', prev);
+const PP_ABR = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const PP_MAPA = 'https://maps.app.goo.gl/uvZhsEEX2UqcwfCc9';
+const ymIdx = ym => { const p = String(ym).split('-'); return +p[0] * 12 + (+p[1] - 1); };
+const idxYm = i => Math.floor(i / 12) + '-' + pad(i % 12 + 1);
+const okYm = v => /^\d{4}-(0[1-9]|1[0-2])$/.test(v || '');
+const ppTag = ym => okYm(ym) ? PP_ABR[+ym.slice(5) - 1] + ym.slice(2, 4) : '—';
+function ppCur() { const t = artNow(Date.now()); return t.y * 12 + t.m - 1; }
+const ppNum = s => foldTxt(s).replace(/[^a-z0-9]/g, '');
+const ppName = s => foldTxt(s).replace(/\s+/g, ' ').trim();
+const ppKey = p => phoneWA(p.phone) || ppName(p.owner);
+const nameCase = s => String(s || '').replace(/(^|[\s'’-])(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
+const ppEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const prevToRow = r => ({ id: r.id, propietario: r.owner, telefono: r.phone || null, venc: r.venc, numero: r.number || null, capacidad: r.cap || null, marca: r.brand || null, tipo: r.type || null, avisado: r.avisado || null, renovado: !!r.renovado, created_at: new Date(r.created || Date.now()).toISOString() });
+const prevFromRow = x => ({ id: x.id, owner: x.propietario, phone: x.telefono || '', venc: x.venc, number: x.numero || '', cap: x.capacidad || '', brand: x.marca || '', type: x.tipo || '', avisado: x.avisado || '', renovado: !!x.renovado, created: Date.parse(x.created_at), sv: true });
+function ppPatch(r, local) {
+  Object.assign(r, local);
+  const row = prevToRow(r); delete row.id; delete row.created_at;
+  queue({ t: 'ppatch', id: r.id, patch: row }); savePrev();
+}
+// lectura de dictado: nombre, teléfono y mes (+ datos opcionales de cada matafuego)
+const ppEntries = (function () {
+  const MES_NUM = { ene: 1, enero: 1, feb: 2, febrero: 2, mar: 3, marzo: 3, abr: 4, abril: 4, may: 5, mayo: 5, jun: 6, junio: 6, jul: 7, julio: 7, ago: 8, agosto: 8, sep: 9, sept: 9, set: 9, septiembre: 9, setiembre: 9, oct: 10, octubre: 10, nov: 11, noviembre: 11, dic: 12, diciembre: 12 };
+  const ymOf = (y, m) => y + '-' + (m < 10 ? '0' : '') + m;
+  const fullYear = (str, nowYear) => { let n = Number(str); if (str.length === 2) n += 2000; return n >= nowYear - 8 && n <= nowYear + 3 ? n : 0; };
+  const MES_RE = /(?<![a-záéíóúñ])(enero|ene|febrero|feb|marzo|mar|abril|abr|mayo|may|junio|jun|julio|jul|agosto|ago|septiembre|setiembre|sept|sep|set|octubre|oct|noviembre|nov|diciembre|dic)(\.?)(?:\s*(?:de|del|-|\/)?\s*(\d{4}|\d{2})(?!\d))?(?![a-záéíóúñ])/gi;
+  const EDGE = ['cliente', 'vence', 'vencimiento', 'vencen', 'vino', 'el', 'la', 'en', 'de', 'del', 'a', 'tel', 'telefono', 'teléfono', 'celular', 'cel', 'numero', 'número', 'al', 'con', 'y', 'su', 'mes'];
+  return function (line, now) {
+    let s = line.trim(); if (!s) return null;
+    const nowYear = now.getFullYear(); let mes = '';
+    const mm = s.match(/(?<!\d)(0?[1-9]|1[0-2])\/(\d{4}|\d{2})(?!\d)/);
+    if (mm) { const yy = fullYear(mm[2], nowYear); if (yy) { mes = ymOf(yy, Number(mm[1])); s = s.replace(mm[0], ' '); } }
+    if (!mes) {
+      const all = Array.from(s.matchAll(MES_RE)); let pick = null;
+      for (let k = all.length - 1; k >= 0; k--) {
+        const c = all[k], before = s.slice(0, c.index).trim(), after = s.slice(c.index + c[0].length).replace(/[^a-záéíóúñ]/gi, '');
+        if (before === '' && after !== '') continue; pick = c; break;
+      }
+      if (pick) {
+        const yr = pick[3] ? fullYear(pick[3], nowYear) : 0;
+        mes = ymOf(yr || nowYear, MES_NUM[pick[1].toLowerCase()]);
+        if (pick[3] && !yr) { const baseLen = pick[1].length + pick[2].length; s = s.slice(0, pick.index) + ' ' + s.slice(pick.index + baseLen); }
+        else s = s.slice(0, pick.index) + ' ' + s.slice(pick.index + pick[0].length);
+      }
+    }
+    let tel = ''; const pm = s.match(/\+?\d[\d\s().-]{5,}\d/);
+    if (pm && pm[0].replace(/\D/g, '').length >= 7) { tel = pm[0].replace(/\s+/g, ' ').trim(); s = s.replace(pm[0], ' '); }
+    const words = s.replace(/[,.:;()]+/g, ' ').split(/\s+/).filter(Boolean);
+    while (words.length && EDGE.indexOf(words[0].toLowerCase()) !== -1) words.shift();
+    while (words.length && EDGE.indexOf(words[words.length - 1].toLowerCase()) !== -1) words.pop();
+    const nombre = words.join(' ');
+    if (!nombre && !tel && !mes) return null;
+    return { nombre: nameCase(nombre), tel, mes: mes || ymOf(nowYear, now.getMonth() + 1), mesAuto: !mes };
+  };
+})();
+function ppParse(text) {
+  const now = new Date(), out = [];
+  String(text || '').replace(/(nueva l[ií]nea|nuevo rengl[oó]n|siguiente cliente|siguiente)/gi, '\n').split(/[\n;]+/).forEach(line => {
+    let s = line; if (!s.trim()) return;
+    const x = { number: '', cap: '', brand: '', type: '' };
+    let m = s.match(/(?:n[uú]mero|n[°º]|nro\.?)\s*([A-Za-z]*\d[A-Za-z0-9-]*)/i);
+    if (m && m[1].replace(/\D/g, '').length < 7) { x.number = m[1]; s = s.replace(m[0], ' '); }
+    m = s.match(/(\d+(?:[.,]\d+)?)\s*(?:kilos?|kgs?)\b/i);
+    if (m) { x.cap = normCap(m[1].replace(',', '.') + ' kg'); s = s.replace(m[0], ' '); }
+    m = s.match(/marca\s+([^\s,.;]+)/i); if (m) { x.brand = nameCase(m[1]); s = s.replace(m[0], ' '); }
+    m = s.match(/tipo\s+([^\s,.;]+)/i); if (m) { x.type = m[1].toUpperCase(); s = s.replace(m[0], ' '); }
+    const e = ppEntries(s, now); if (e) out.push(Object.assign(e, x));
+  });
+  return out;
+}
+let ppRows = [], ppMode = lsGet('hab.ppmode', 'vino') === 'vence' ? 'vence' : 'vino', ppFilter = 'avisar', ppQuery = '', ppMissing = false;
+const ppVenc = r => !okYm(r.mes) ? '' : (ppMode === 'vino' && !r.edit ? idxYm(ymIdx(r.mes) + 12) : r.mes);
+function ppMatch(r) {
+  const v = ppVenc(r), k = ppKey({ phone: r.tel, owner: r.nombre });
+  return prev.find(p => p.id !== r.edit && ppKey(p) === k && p.venc === v && ppNum(p.number) === ppNum(r.number) && foldTxt(p.cap) === foldTxt(r.cap) && foldTxt(p.brand) === foldTxt(r.brand)) || null;
+}
+function ppRowNote(r) {
+  const out = [];
+  if (!String(r.nombre || '').trim()) out.push('Falta el nombre.');
+  if (r.tel && !phoneWA(r.tel)) out.push('Revisá el teléfono: así no se puede abrir en WhatsApp.');
+  if (!r.tel) out.push('Sin teléfono: lo podés completar después.');
+  if (r.mesAuto) out.push('No dijiste el mes: puse el actual. Corregilo si hace falta.');
+  if (okYm(r.mes)) out.push('Vence ' + ppTag(ppVenc(r)) + (r.edit ? ' (estás editando: el mes es el de vencimiento).' : '.'));
+  if (!r.edit) out.push(ppMatch(r) ? 'Ya está cargado igual: se actualiza, no se duplica.' : 'Matafuego nuevo.');
+  return out.join(' ');
+}
+function ppRowsValid() { return ppRows.length && ppRows.every(r => String(r.nombre || '').trim() && okYm(r.mes)); }
+function ppRenderRows() {
+  const box = $('pp-rows');
+  box.innerHTML = ppRows.map((r, i) => '<div class="pprow">' +
+    '<label class="wide">Nombre<input data-i="' + i + '" data-f="nombre" value="' + ppEsc(r.nombre) + '" autocomplete="off"></label>' +
+    '<label>Teléfono<input data-i="' + i + '" data-f="tel" type="tel" inputmode="tel" value="' + ppEsc(r.tel) + '" autocomplete="off"></label>' +
+    '<label>' + (r.edit || ppMode === 'vence' ? 'Mes de vencimiento' : 'Mes en que vino') + '<input data-i="' + i + '" data-f="mes" type="month" value="' + ppEsc(r.mes) + '"></label>' +
+    '<label>N° de matafuego<input data-i="' + i + '" data-f="number" value="' + ppEsc(r.number) + '" autocomplete="off"></label>' +
+    '<label>Kilos<input data-i="' + i + '" data-f="cap" value="' + ppEsc(r.cap) + '" autocomplete="off"></label>' +
+    '<label>Marca<input data-i="' + i + '" data-f="brand" value="' + ppEsc(r.brand) + '" autocomplete="off"></label>' +
+    '<label>Tipo<input data-i="' + i + '" data-f="type" value="' + ppEsc(r.type) + '" autocomplete="off"></label>' +
+    '<p id="ppn-' + i + '">' + ppEsc(ppRowNote(r)) + '</p>' +
+    '<button type="button" class="small wide" data-act="otro" data-i="' + i + '">+ Otro matafuego de este cliente</button>' +
+    '<button type="button" class="small wide danger" data-act="quitar" data-i="' + i + '">Quitar</button></div>').join('');
+  ppRenderSave();
+}
+function ppRenderSave() {
+  const b = $('pp-save'), n = ppRows.length;
+  b.disabled = !ppRowsValid();
+  b.textContent = ppRows.some(r => r.edit) ? 'Guardar cambios' : n > 1 ? 'Guardar ' + n + ' matafuegos' : 'Guardar';
+}
+function ppSave() {
+  let nuevos = 0, act = 0;
+  ppRows.forEach(r => {
+    const owner = nameCase(r.nombre.trim()), v = ppVenc(r);
+    const data = { owner, phone: (r.tel || '').trim(), venc: v, number: (r.number || '').trim(), cap: (r.cap || '').trim(), brand: (r.brand || '').trim(), type: (r.type || '').trim() };
+    const ex = r.edit ? prev.find(p => p.id === r.edit) : ppMatch(r);
+    if (ex) { act++; ppPatch(ex, Object.assign(data, r.edit ? {} : { phone: ex.phone || data.phone, avisado: '', renovado: false })); }
+    else { nuevos++; const rec = Object.assign({ id: uuid(), created: Date.now(), avisado: '', renovado: false, sv: false }, data); prev.push(rec); queue({ t: 'pins', id: rec.id }); }
+  });
+  savePrev();
+  toast('Guardado: ' + [nuevos ? nuevos + (nuevos === 1 ? ' nuevo' : ' nuevos') : '', act ? act + (act === 1 ? ' actualizado' : ' actualizados') : ''].filter(Boolean).join(' y ') + '.');
+  ppRows = []; $('pp-in').value = ''; ppRenderRows(); ppRenderList(); ppBadge();
+}
+// ¿ya hizo la habilitación digital? Entonces deja de estar pendiente
+function ppRenewed(p) {
+  if (p.renovado) return true;
+  const last = ymIdx(p.venc) - 12, k = ppKey(p);
+  return hist.some(h => !h.anulada && ymIdx(String(h.emision).slice(0, 7)) > last && ppKey({ phone: h.phone, owner: h.owner }) === k && (!p.number || ppNum(h.number) === ppNum(p.number)));
+}
+function ppGroups() {
+  const cur = ppCur(), q = foldTxt(ppQuery), qd = ppQuery.replace(/\D/g, ''), map = {};
+  prev.forEach(p => {
+    const ren = ppRenewed(p), di = ymIdx(p.venc) - cur;
+    if (q) { if (!(foldTxt(p.owner).includes(q) || foldTxt(p.number).includes(q) || (qd.length >= 3 && String(p.phone).replace(/\D/g, '').includes(qd)))) return; }
+    else if (ppFilter === 'avisar') { if (ren || p.avisado || di > 0) return; }
+    else if (ppFilter === 'proximo') { if (ren || di !== 1) return; }
+    else if (ppFilter === 'enviados') { if (!p.avisado) return; }
+    const key = ppKey(p) + '|' + p.venc;
+    (map[key] = map[key] || { owner: p.owner, phone: p.phone, venc: p.venc, rows: [] }).rows.push(p);
+    if (!map[key].phone && p.phone) map[key].phone = p.phone;
+  });
+  return Object.values(map).sort((a, b) => ymIdx(a.venc) - ymIdx(b.venc) || a.owner.localeCompare(b.owner, 'es'));
+}
+function ppMsg(g) {
+  const di = ymIdx(g.venc) - ppCur(), nombre = g.owner.trim().toUpperCase(), n = g.rows.length;
+  const est = di > 1 ? 'TU MATAFUEGOS VENCE PRONTO!' : di === 1 ? 'TU MATAFUEGOS VENCE EL MES PRÓXIMO!' : di === 0 ? 'TU MATAFUEGOS VENCE ESTE MES!' : 'TU MATAFUEGOS ESTÁ VENCIDO!';
+  const est2 = n > 1 ? est.replace('TU MATAFUEGOS', 'TUS MATAFUEGOS').replace('VENCE', 'VENCEN').replace('ESTÁ', 'ESTÁN').replace('VENCIDO', 'VENCIDOS') : est;
+  return '⚠️HEY! ' + nombre + ' ' + est2 + '⚠️\n' + 'Division Matafuegos Del Valle. Horarios de Lun-Vier 9a13 -17a21hs Sab 9a13hs. ⚠️NUEVA DIRECCION!!!! \nLUIS BURELLA 8 CASI GUEMES ⚠️\n\nAbrí el enlace, activá el GPS y apretá el botón INICIAR, y te trae hasta el taller:\n' + PP_MAPA + '\n\nTE ESPERAMOS NUEVAMENTE!';
+}
+function ppRenderList() {
+  const box = $('pp-list'), gs = ppGroups(); box.innerHTML = '';
+  const total = gs.reduce((a, g) => a + g.rows.length, 0);
+  $('pp-count').textContent = gs.length ? '· ' + gs.length + (gs.length === 1 ? ' cliente' : ' clientes') + ' · ' + total + ' matafuegos' : '';
+  if (!prev.length) { box.innerHTML = '<p class="hint">Todavía no cargaste clientes del papel.</p>'; return; }
+  if (!gs.length) { box.innerHTML = '<p class="hint">' + (ppQuery ? 'No hay clientes que coincidan.' : ppFilter === 'avisar' ? 'No hay clientes para avisar.' : 'No hay clientes en esta lista.') + '</p>'; return; }
+  const cur = ppCur();
+  gs.forEach(g => {
+    const di = ymIdx(g.venc) - cur, allSent = g.rows.every(r => r.avisado), allRen = g.rows.every(ppRenewed);
+    const chipCls = allRen ? 'vigente' : di < 0 ? 'vencida' : di === 0 ? 'porvencer' : 'vigente';
+    const chipTxt = allRen ? 'Ya recargó' : di < 0 ? 'Vencido ' + ppTag(g.venc) : di === 0 ? 'Vence este mes' : 'Vence ' + ppTag(g.venc);
+    const el = document.createElement('div'); el.className = 'ppgrp';
+    const lis = g.rows.map(r => '<li>' + ppEsc([r.number ? 'N° ' + r.number : 'Sin número', r.cap, r.brand, r.type].filter(Boolean).join(' · ')) + (r.avisado ? ' · avisado' : '') + (ppRenewed(r) ? ' · recargó' : '') + ' <a href="#" data-act="edit" data-id="' + r.id + '">editar</a>' + (isDueno() ? ' · <a href="#" data-act="del" data-id="' + r.id + '">borrar</a>' : '') + '</li>').join('');
+    el.innerHTML = '<div class="row static" style="padding:0;border:0"><div class="t"><b>' + ppEsc(g.owner) + '</b><span>' + ppEsc(g.phone || 'Sin teléfono') + ' · ' + g.rows.length + (g.rows.length === 1 ? ' matafuego' : ' matafuegos') + '</span></div><span class="chip ' + chipCls + '">' + ppEsc(chipTxt) + '</span></div><ul>' + lis + '</ul><div class="ppacts"></div>';
+    const acts = el.querySelector('.ppacts');
+    const wa = phoneWA(g.phone);
+    if (allSent) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Volver a pendientes'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { avisado: '' })); ppRenderList(); }; acts.appendChild(b); }
+    else if (wa) {
+      const a = document.createElement('a'); a.className = 'btn small'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Avisar por WhatsApp';
+      a.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(ppMsg(g));
+      a.addEventListener('click', () => { g.rows.forEach(r => ppPatch(r, { avisado: todayISO() })); setTimeout(() => { ppRenderList(); ppBadge(); }, 600); });
+      acts.appendChild(a);
+    } else { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Falta el teléfono'; acts.appendChild(c); }
+    if (!allRen) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Ya recargó'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { renovado: true })); ppRenderList(); ppBadge(); toast(g.owner + ': marcado como recargado.'); }; acts.appendChild(b); }
+    box.appendChild(el);
+  });
+}
+function ppBadge() {
+  const cur = ppCur(); const n = new Set(prev.filter(p => !p.avisado && ymIdx(p.venc) <= cur && !ppRenewed(p)).map(p => ppKey(p) + '|' + p.venc)).size;
+  const el = $('pp-badge'); if (el) el.textContent = n ? '(' + n + ')' : '';
+}
+function ppShow(which) {
+  $('av-hab').hidden = which !== 'hab'; $('av-pap').hidden = which !== 'pap';
+  $('seg-hab').setAttribute('aria-pressed', String(which === 'hab')); $('seg-pap').setAttribute('aria-pressed', String(which === 'pap'));
+  if (which === 'pap') { $('pp-mode').value = ppMode; $('pp-miss').hidden = !ppMissing; ppRenderList(); } else renderAvisos();
+}
+$('seg-hab').onclick = () => ppShow('hab'); $('seg-pap').onclick = () => ppShow('pap');
+$('pp-mode').onchange = e => { ppMode = e.target.value; lsSet('hab.ppmode', ppMode); ppRenderRows(); };
+$('pp-in').addEventListener('input', () => { ppRows = ppParse($('pp-in').value); ppRenderRows(); });
+$('pp-rows').addEventListener('input', e => {
+  const t = e.target; if (!t.dataset || t.dataset.i === undefined) return;
+  const i = +t.dataset.i; ppRows[i][t.dataset.f] = t.value; if (t.dataset.f === 'mes') ppRows[i].mesAuto = false;
+  const n = $('ppn-' + i); if (n) n.textContent = ppRowNote(ppRows[i]); ppRenderSave();
+});
+$('pp-rows').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return; const i = +b.dataset.i;
+  if (b.dataset.act === 'quitar') ppRows.splice(i, 1);
+  else if (b.dataset.act === 'otro') { const r = ppRows[i]; ppRows.splice(i + 1, 0, { nombre: r.nombre, tel: r.tel, mes: r.mes, mesAuto: false, number: '', cap: '', brand: '', type: '', edit: null }); }
+  ppRenderRows();
+});
+$('pp-save').onclick = ppSave;
+$('pp-filter').onchange = e => { ppFilter = e.target.value; ppRenderList(); };
+$('pp-q').addEventListener('input', e => { ppQuery = e.target.value; ppRenderList(); });
+$('pp-list').addEventListener('click', e => {
+  const a = e.target.closest('a[data-act]'); if (!a) return; e.preventDefault();
+  const p = prev.find(x => x.id === a.dataset.id); if (!p) return;
+  if (a.dataset.act === 'edit') {
+    ppRows = [{ nombre: p.owner, tel: p.phone, mes: p.venc, mesAuto: false, number: p.number, cap: p.cap, brand: p.brand, type: p.type, edit: p.id }]; ppRenderRows();
+    $('pp-rows').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else if (a.dataset.act === 'del') {
+    if (!confirm('¿Borrar este matafuego de ' + p.owner + '? No se puede deshacer.')) return;
+    prev = prev.filter(x => x.id !== p.id); queue({ t: 'pdel', id: p.id }); savePrev(); ppRenderList(); ppBadge();
+  }
+});
+
 /* ===== cobros: cupón de pago con Mercado Pago ===== */
 let pays = lsGet('hab.pays', {});
 const batchOf = r => r.batch || r.id;
 const money = n => '$' + Number(n || 0).toLocaleString('es-AR');
+const svcLabel = v => (/^servi/i.test(v || '') ? 'Service' : (v || ''));
 const kgOf = cap => { const m = String(cap || '').replace(',', '.').match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : NaN; };
 const priceOf = r => {
-  const svc = r.obs === 'Recarga' ? 'recarga' : r.obs === 'Servi' ? 'servi' : null; if (!svc) return 0;
+  const svc = r.obs === 'Recarga' ? 'recarga' : /^servi/i.test(r.obs || '') ? 'servi' : null; if (!svc) return 0;
   const row = (settings.prices || []).find(p => p.kg === kgOf(r.cap));
   return row && row[svc] > 0 ? row[svc] : (svc === 'recarga' ? settings.pRecarga : settings.pServi);
 };
@@ -1254,7 +1519,7 @@ function openCoupon(r) {
   const ul = $('cp-lines'); ul.innerHTML = '';
   recs.forEach(x => {
     const li = document.createElement('li'), d = document.createElement('div'), s = document.createElement('div');
-    d.textContent = 'N° ' + x.number + ' · ' + (x.obs || 'Sin servicio indicado') + (x.cap ? ' · ' + x.cap : ''); s.textContent = money(priceOf(x)); s.style.fontWeight = '700'; s.style.flex = '0 0 auto';
+    d.textContent = 'N° ' + x.number + ' · ' + (svcLabel(x.obs) || 'Sin servicio indicado') + (x.cap ? ' · ' + x.cap : ''); s.textContent = money(priceOf(x)); s.style.fontWeight = '700'; s.style.flex = '0 0 auto';
     li.append(d, s); ul.appendChild(li);
   });
   $('cp-owner').textContent = recs[0].owner + (recs[0].orden ? ' · Orden N° ' + recs[0].orden : '');
@@ -1289,7 +1554,7 @@ async function drawCoupon(canvas, d) {
   c.fillText((first.orden ? 'Orden N° ' + first.orden + ' · ' : '') + 'Cupón ' + d.code + ' · ' + fmtDate(first.emision), 60, 582);
   let y = 655; const max = 6;
   d.recs.slice(0, max).forEach(r => {
-    const lab = 'N° ' + r.number + ' · ' + (r.obs || 'Servicio') + (r.cap ? ' · ' + r.cap : '');
+    const lab = 'N° ' + r.number + ' · ' + (svcLabel(r.obs) || 'Servicio') + (r.cap ? ' · ' + r.cap : '');
     c.fillStyle = '#fff'; c.textAlign = 'left'; fitFont(c, lab, 640, 38, 600); c.fillText(lab, 60, y);
     c.textAlign = 'right'; c.font = '600 38px ' + FAM; c.fillText(money(priceOf(r)), W - 60, y); y += 56;
   });
@@ -1348,7 +1613,7 @@ const SB_KEY = 'sb_publishable_5WypKLBR7EaVznvKzhqdvw_nsyLH1H2';
 const EPOCH = '1970-01-01T00:00:00Z';
 let sb = null, session = null, profile = lsGet('hab.profile', null);
 let outbox = lsGet('hab.outbox', []);
-let lastPull = lsGet('hab.lastpull', { h: EPOCH, p: EPOCH });
+let lastPull = lsGet('hab.lastpull', { h: EPOCH, p: EPOCH, c: EPOCH });
 let syncing = false, syncState = 'idle';
 const isDueno = () => !!(profile && profile.rol === 'dueno');
 const isUuid = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || '');
@@ -1392,9 +1657,12 @@ function mergeRow(x) {
 
 /* ----- sincronización: primero se suben los cambios guardados, después se baja lo nuevo ----- */
 const isNetErr = e => !e || e.status === 0 || /fetch|network|timeout|load failed|jwt|token/i.test(String(e.message || ''));
+const PREV_OPS = { pins: 1, ppatch: 1, pdel: 1 };
+const isMissingTbl = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /clientes_previos/i.test(String(e.message || '')));
 async function pushOutbox() {
-  while (outbox.length) {
-    const op = outbox[0]; let res = null;
+  let i = 0;
+  while (i < outbox.length) {
+    const op = outbox[i]; let res = null;
     try {
       if (op.t === 'ins') {
         const r = hist.find(x => x.id === op.id);
@@ -1404,13 +1672,18 @@ async function pushOutbox() {
       else if (op.t === 'pay') {
         const p = pays[op.batch];
         if (p) res = await sb.from('pagos').upsert({ batch: op.batch, monto: p.amount, cupon_at: new Date(p.coupon || Date.now()).toISOString(), pagado_at: p.paid ? new Date(p.paid).toISOString() : null }, { onConflict: 'batch' });
-      }
+      } else if (op.t === 'pins') {
+        const r = prev.find(x => x.id === op.id);
+        if (r) { res = await sb.from('clientes_previos').upsert(prevToRow(r), { onConflict: 'id', ignoreDuplicates: true }); if (!res.error) r.sv = true; }
+      } else if (op.t === 'ppatch') res = await sb.from('clientes_previos').update(op.patch).eq('id', op.id);
+      else if (op.t === 'pdel') res = await sb.from('clientes_previos').delete().eq('id', op.id);
     } catch (e) { return false; }
     if (res && res.error) {
+      if (PREV_OPS[op.t] && isMissingTbl(res.error)) { ppMissing = true; i++; continue; }
       if (isNetErr(res.error)) return false;
       toast('No se pudo subir un cambio: ' + res.error.message);
     }
-    outbox.shift(); saveOutbox();
+    outbox.splice(i, 1); saveOutbox();
   }
   return true;
 }
@@ -1437,6 +1710,25 @@ async function pullAll() {
     const have = new Set(ids.data.map(x => x.id)), pend = new Set(outbox.filter(o => o.t === 'ins').map(o => o.id));
     hist = hist.filter(r => !r.sv || have.has(r.id) || pend.has(r.id));
   }
+  try {
+    lastPull.c = lastPull.c || EPOCH;
+    const pend = id => outbox.some(o => o.id === id);
+    let okp = true;
+    for (let guard = 0; guard < 40; guard++) {
+      const { data, error } = await sb.from('clientes_previos').select('*').gt('updated_at', lastPull.c).order('updated_at', { ascending: true }).limit(500);
+      if (error) { okp = false; if (isMissingTbl(error)) ppMissing = true; break; }
+      if (!data.length) break;
+      data.forEach(x => { const k = prev.findIndex(p => p.id === x.id); if (k < 0) prev.push(prevFromRow(x)); else if (!pend(x.id)) prev[k] = prevFromRow(x); });
+      lastPull.c = data[data.length - 1].updated_at;
+      if (data.length < 500) break;
+    }
+    if (okp) {
+      ppMissing = false;
+      const ids = await sb.from('clientes_previos').select('id').limit(20000);
+      if (!ids.error && ids.data) { const have = new Set(ids.data.map(x => x.id)); prev = prev.filter(r => !r.sv || have.has(r.id) || pend(r.id)); }
+    }
+  } catch (e) { /* los clientes del papel no frenan lo demás */ }
+  savePrev();
   lsSet('hab.lastpull', lastPull);
   return true;
 }
@@ -1458,7 +1750,8 @@ function renderSync() {
 function refreshViews() {
   updateBadge();
   if (!$('tab-historial').hidden && $('h-detail').hidden) renderHistory();
-  if (!$('tab-avisos').hidden) renderAvisos();
+  if (!$('tab-avisos').hidden) { if ($('av-pap').hidden) renderAvisos(); else { ppRenderList(); $('pp-miss').hidden = !ppMissing; } }
+  ppBadge();
 }
 async function syncNow(manual) {
   if (syncing || !sb || !session || !profile || profile.rol === 'pendiente') return;
@@ -1523,7 +1816,7 @@ async function logout() {
   try { if (sb) await withTimeout(sb.auth.signOut(), 4000); } catch (e) { /* se limpia igual */ }
   try { Object.keys(localStorage).filter(k => k.indexOf('sb-') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) { /* sin almacenamiento */ }
   session = null; profile = null; lsSet('hab.profile', null);
-  hist = []; pays = {}; saveHist(); savePays(); lastPull = { h: EPOCH, p: EPOCH }; lsSet('hab.lastpull', lastPull); lsSet('hab.migrated', false);
+  hist = []; pays = {}; prev = []; savePrev(); saveHist(); savePays(); lastPull = { h: EPOCH, p: EPOCH, c: EPOCH }; lsSet('hab.lastpull', lastPull); lsSet('hab.migrated', false);
   $('statusbar').hidden = true; show('nueva'); showLogin('');
 }
 $('logout').onclick = e => { e.preventDefault(); logout(); };
