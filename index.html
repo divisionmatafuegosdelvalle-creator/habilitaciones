@@ -442,7 +442,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.9</p>
+  <p class="hint">Versión 4.10</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -591,6 +591,8 @@ const RE_BRK = new RegExp('(?<![\\p{L}\\d])(?:(?:matafuegos?|extintor(?:es)?)\\s
 function parseOrder(text) {
   const head = {}, items = [];
   let cur = null;
+  // "siguiente" (con o sin "matafuego") corta el matafuego anterior y no se pega a su último dato
+  text = text.replace(/(?<![\p{L}\d])siguientes?(?![\p{L}\d])\s*[,.:;]?\s*(?:matafuegos?|extintor(?:es)?)?/giu, ' xitemx ');
   text = text.replace(RE_BRK, ' xitemx ');
   const ms = [...text.matchAll(KEY_RE)];
   ms.forEach((m, i) => {
