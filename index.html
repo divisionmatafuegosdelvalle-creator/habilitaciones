@@ -314,7 +314,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
       <div class="panel">
         <h2>Clientes del papel <span id="pp-count"></span></h2>
         <div class="grid">
-          <label>Mostrar<select id="pp-filter"><option value="avisar">Para avisar (vencidos y de este mes)</option><option value="proximo">Vencen el mes próximo</option><option value="enviados">Ya avisados</option><option value="recargaron">Ya recargaron</option><option value="todos">Todos</option></select></label>
+          <label>Mostrar<select id="pp-filter"><option value="avisar">Para avisar (ronda actual)</option><option value="proximo">Vencen el mes próximo</option><option value="enviados">Ya avisados</option><option value="recargaron">Ya recargaron</option><option value="todos">Todos</option></select></label>
           <label>Buscar<input id="pp-q" type="search" placeholder="Nombre, N° o teléfono" autocomplete="off"></label>
         </div>
         <div id="pp-list"></div>
@@ -442,7 +442,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.13</p>
+  <p class="hint">Versión 4.14</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -1246,7 +1246,7 @@ function renderAvisos() {
     if (phoneWA(g.phone)) {
       const a = document.createElement('a'); a.className = 'btn small'; a.textContent = 'WhatsApp'; a.target = '_blank'; a.rel = 'noopener';
       a.href = 'https://wa.me/' + phoneWA(g.phone) + '?text=' + encodeURIComponent(noticeMsg(g));
-      a.addEventListener('click', () => { g.recs.forEach(x => { x.r.avisos = x.r.avisos || {}; x.r.avisos[g.n] = Date.now(); queue({ t: 'patch', id: x.r.id, patch: { avisos: x.r.avisos } }); }); saveHist(); markSentNow(a); setTimeout(() => { renderAvisos(); updateBadge(); }, 500); });
+      a.addEventListener('click', () => { g.recs.forEach(x => { x.r.avisos = x.r.avisos || {}; x.r.avisos[g.n] = Date.now(); queue({ t: 'patch', id: x.r.id, patch: { avisos: x.r.avisos } }); }); saveHist(); setTimeout(() => { renderAvisos(); updateBadge(); }, 500); });
       row.appendChild(a);
     } else { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Sin teléfono'; row.appendChild(c); }
     box.appendChild(row);
@@ -1278,6 +1278,9 @@ function renderAvisos() {
 /* ===== clientes del papel (años anteriores) ===== */
 let prev = lsGet('hab.prev', []);
 const savePrev = () => lsSet('hab.prev', prev);
+// n = avisos ya enviados por ese vencimiento (0, 1 o 2). Los registros viejos se convierten una sola vez.
+const ppN0 = r => r.avisado ? (r.avisado >= r.venc + '-20' ? 2 : 1) : 0;
+prev.forEach(r => { if (r.n == null) r.n = ppN0(r); });
 const PP_ABR = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const PP_MAPA = 'https://maps.app.goo.gl/uvZhsEEX2UqcwfCc9';
 const ymIdx = ym => { const p = String(ym).split('-'); return +p[0] * 12 + (+p[1] - 1); };
@@ -1290,8 +1293,8 @@ const ppName = s => foldTxt(s).replace(/\s+/g, ' ').trim();
 const ppKey = p => phoneWA(p.phone) || ppName(p.owner);
 const nameCase = s => String(s || '').replace(/(^|[\s'’-])(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
 const ppEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const prevToRow = r => ({ id: r.id, propietario: r.owner, telefono: r.phone || null, venc: r.venc, numero: r.number || null, capacidad: r.cap || null, marca: r.brand || null, tipo: r.type || null, avisado: r.avisado || null, renovado: !!r.renovado, created_at: new Date(r.created || Date.now()).toISOString() });
-const prevFromRow = x => ({ id: x.id, owner: x.propietario, phone: x.telefono || '', venc: x.venc, number: x.numero || '', cap: x.capacidad || '', brand: x.marca || '', type: x.tipo || '', avisado: x.avisado || '', renovado: !!x.renovado, created: Date.parse(x.created_at), sv: true });
+const prevToRow = r => ({ id: r.id, propietario: r.owner, telefono: r.phone || null, venc: r.venc, numero: r.number || null, capacidad: r.cap || null, marca: r.brand || null, tipo: r.type || null, avisado: r.avisado || null, avisos: r.n || 0, renovado: !!r.renovado, created_at: new Date(r.created || Date.now()).toISOString() });
+const prevFromRow = x => ({ id: x.id, owner: x.propietario, phone: x.telefono || '', venc: x.venc, number: x.numero || '', cap: x.capacidad || '', brand: x.marca || '', type: x.tipo || '', avisado: x.avisado || '', n: x.avisos > 0 ? x.avisos : ppN0({ avisado: x.avisado || '', venc: x.venc }), renovado: !!x.renovado, created: Date.parse(x.created_at), sv: true });
 function ppPatch(r, local) {
   Object.assign(r, local);
   const row = prevToRow(r); delete row.id; delete row.created_at;
@@ -1390,8 +1393,8 @@ function ppSave() {
     const owner = nameCase(r.nombre.trim()), v = ppVenc(r);
     const data = { owner, phone: (r.tel || '').trim(), venc: v, number: (r.number || '').trim(), cap: (r.cap || '').trim(), brand: (r.brand || '').trim(), type: (r.type || '').trim() };
     const ex = r.edit ? prev.find(p => p.id === r.edit) : ppMatch(r);
-    if (ex) { act++; ppPatch(ex, Object.assign(data, r.edit ? {} : { phone: ex.phone || data.phone, avisado: '', renovado: false })); }
-    else { nuevos++; const rec = Object.assign({ id: uuid(), created: Date.now(), avisado: '', renovado: false, sv: false }, data); prev.push(rec); queue({ t: 'pins', id: rec.id }); }
+    if (ex) { act++; ppPatch(ex, Object.assign(data, r.edit ? {} : { phone: ex.phone || data.phone, avisado: '', n: 0, renovado: false })); }
+    else { nuevos++; const rec = Object.assign({ id: uuid(), created: Date.now(), avisado: '', n: 0, renovado: false, sv: false }, data); prev.push(rec); queue({ t: 'pins', id: rec.id }); }
   });
   savePrev();
   toast('Guardado: ' + [nuevos ? nuevos + (nuevos === 1 ? ' nuevo' : ' nuevos') : '', act ? act + (act === 1 ? ' actualizado' : ' actualizados') : ''].filter(Boolean).join(' y ') + '.');
@@ -1403,34 +1406,32 @@ function ppRenewed(p) {
   const last = ymIdx(p.venc) - 12, k = ppKey(p);
   return hist.some(h => !h.anulada && ymIdx(String(h.emision).slice(0, 7)) > last && ppKey({ phone: h.phone, owner: h.owner }) === k && (!p.number || ppNum(h.number) === ppNum(p.number)));
 }
-// pendiente: no recargó, venció o vence este mes, y todavía no se le avisó en la tanda de hoy (1.ª: desde avD1, 2.ª: desde avD2)
-function ppPending(p) {
-  const di = ymIdx(p.venc) - ppCur();
-  if (di > 0 || ppRenewed(p)) return false;
-  if (!p.avisado) return true;
-  if (di < 0) return false;
-  const t = artNow(Date.now()), start = t.d >= settings.avD2 ? settings.avD2 : t.d >= settings.avD1 ? settings.avD1 : 1;
-  return p.avisado < t.y + '-' + pad(t.m) + '-' + pad(start);
+// Rondas: cada mes se avisa 2 veces. Mientras queden clientes de la ronda actual, solo esos aparecen; cuando se manda el último, empieza la ronda siguiente (sin los que ya recargaron).
+function ppRounds() {
+  const cur = ppCur(), mn = {};
+  prev.forEach(p => { if (ymIdx(p.venc) > cur || ppRenewed(p) || !phoneWA(p.phone)) return; mn[p.venc] = Math.min(mn[p.venc] == null ? 9 : mn[p.venc], p.n || 0); });
+  return mn;
 }
-// al tocar WhatsApp: la tarjeta queda marcada y sin botón al instante (no se puede mandar dos veces seguidas)
-function markSentNow(a) {
-  a.textContent = 'Avisado ✓'; a.style.pointerEvents = 'none'; a.style.opacity = '.55'; a.removeAttribute('href');
-  const card = a.closest('.ppgrp, .row'); if (card) { card.style.opacity = '.5'; card.querySelectorAll('button').forEach(b => { b.disabled = true; }); }
+function ppPending(p, mn) {
+  if (ymIdx(p.venc) > ppCur() || ppRenewed(p) || (p.n || 0) >= 2) return false;
+  if (!phoneWA(p.phone)) return true;
+  return (p.n || 0) === (mn || ppRounds())[p.venc];
 }
 function ppGroups() {
-  const cur = ppCur(), q = foldTxt(ppQuery), qd = ppQuery.replace(/\D/g, ''), map = {};
+  const cur = ppCur(), q = foldTxt(ppQuery), qd = ppQuery.replace(/\D/g, ''), map = {}, mn = ppRounds();
   prev.forEach(p => {
     const ren = ppRenewed(p), di = ymIdx(p.venc) - cur;
     if (q) { if (!(foldTxt(p.owner).includes(q) || foldTxt(p.number).includes(q) || (qd.length >= 3 && String(p.phone).replace(/\D/g, '').includes(qd)))) return; }
-    else if (ppFilter === 'avisar') { if (!ppPending(p)) return; }
+    else if (ppFilter === 'avisar') { if (!ppPending(p, mn)) return; }
     else if (ppFilter === 'proximo') { if (ren || di !== 1) return; }
-    else if (ppFilter === 'enviados') { if (!p.avisado || ren) return; }
+    else if (ppFilter === 'enviados') { if (!(p.n > 0) || ren) return; }
     else if (ppFilter === 'recargaron') { if (!ren) return; }
     const key = ppKey(p) + '|' + p.venc;
     (map[key] = map[key] || { owner: p.owner, phone: p.phone, venc: p.venc, rows: [] }).rows.push(p);
     if (!map[key].phone && p.phone) map[key].phone = p.phone;
   });
-  return Object.values(map).sort((a, b) => ymIdx(a.venc) - ymIdx(b.venc) || a.owner.localeCompare(b.owner, 'es'));
+  const last = g => g.rows.reduce((a, r) => (r.avisado > a ? r.avisado : a), '');
+  return Object.values(map).sort((a, b) => (ppFilter === 'enviados' && !q ? last(b).localeCompare(last(a)) : 0) || ymIdx(a.venc) - ymIdx(b.venc) || a.owner.localeCompare(b.owner, 'es'));
 }
 function ppMsg(g) {
   const di = ymIdx(g.venc) - ppCur(), nombre = g.owner.trim().toUpperCase(), n = g.rows.length;
@@ -1439,37 +1440,42 @@ function ppMsg(g) {
   return '⚠️HEY! ' + nombre + ' ' + est2 + '⚠️\n' + 'Division Matafuegos Del Valle. Horarios de Lun-Vier 9a13 -17a21hs Sab 9a13hs. ⚠️NUEVA DIRECCION!!!! \nLUIS BURELLA 8 CASI GUEMES ⚠️\n\nAbrí el enlace, activá el GPS y apretá el botón INICIAR, y te trae hasta el taller:\n' + PP_MAPA + '\n\nTE ESPERAMOS NUEVAMENTE!';
 }
 function ppRenderList() {
-  const box = $('pp-list'), gs = ppGroups(); box.innerHTML = '';
+  const box = $('pp-list'), gs = ppGroups(), mn = ppRounds(); box.innerHTML = '';
   const total = gs.reduce((a, g) => a + g.rows.length, 0);
   $('pp-count').textContent = gs.length ? '· ' + gs.length + (gs.length === 1 ? ' cliente' : ' clientes') + ' · ' + total + ' matafuegos' : '';
   if (!prev.length) { box.innerHTML = '<p class="hint">Todavía no cargaste clientes del papel.</p>'; return; }
   if (!gs.length) { box.innerHTML = '<p class="hint">' + (ppQuery ? 'No hay clientes que coincidan.' : ppFilter === 'avisar' ? 'No hay clientes para avisar.' : 'No hay clientes en esta lista.') + '</p>'; return; }
   const cur = ppCur();
+  if (ppFilter === 'avisar' && !ppQuery) {
+    const rr = Object.keys(mn).filter(v => mn[v] < 2).map(v => (mn[v] + 1) + '.º aviso de ' + ppTag(v));
+    if (rr.length) { const h = document.createElement('p'); h.className = 'hint'; h.textContent = 'Ronda actual: ' + rr.join(' · ') + '.'; box.appendChild(h); }
+  }
   gs.forEach(g => {
-    const di = ymIdx(g.venc) - cur, allSent = g.rows.every(r => r.avisado), allRen = g.rows.every(ppRenewed);
+    const di = ymIdx(g.venc) - cur, allRen = g.rows.every(ppRenewed), pend = g.rows.filter(r => ppPending(r, mn));
     const chipCls = allRen ? 'vigente' : di < 0 ? 'vencida' : di === 0 ? 'porvencer' : 'vigente';
     const chipTxt = allRen ? 'Ya recargó' : di < 0 ? 'Vencido ' + ppTag(g.venc) : di === 0 ? 'Vence este mes' : 'Vence ' + ppTag(g.venc);
     const el = document.createElement('div'); el.className = 'ppgrp';
-    const lis = g.rows.map(r => '<li>' + ppEsc([r.number ? 'N° ' + r.number : 'Sin número', r.cap, r.brand, r.type].filter(Boolean).join(' · ')) + (r.avisado ? ' · avisado' : '') + (ppRenewed(r) ? ' · recargó' : '') + ' <a href="#" data-act="edit" data-id="' + r.id + '">editar</a>' + (isDueno() ? ' · <a href="#" data-act="del" data-id="' + r.id + '">borrar</a>' : '') + '</li>').join('');
+    const sh = d => { const q = String(d).split('-'); return q.length === 3 ? q[2] + '/' + q[1] : ''; };
+    const lis = g.rows.map(r => '<li>' + ppEsc([r.number ? 'N° ' + r.number : 'Sin número', r.cap, r.brand, r.type].filter(Boolean).join(' · ')) + (r.n > 0 ? ' · ' + r.n + '.º aviso' + (r.avisado ? ' el ' + sh(r.avisado) : '') : '') + (ppRenewed(r) ? ' · recargó' : '') + ' <a href="#" data-act="edit" data-id="' + r.id + '">editar</a>' + (isDueno() ? ' · <a href="#" data-act="del" data-id="' + r.id + '">borrar</a>' : '') + '</li>').join('');
     el.innerHTML = '<div class="row static" style="padding:0;border:0"><div class="t"><b>' + ppEsc(g.owner) + '</b><span>' + ppEsc(g.phone || 'Sin teléfono') + ' · ' + g.rows.length + (g.rows.length === 1 ? ' matafuego' : ' matafuegos') + '</span></div><span class="chip ' + chipCls + '">' + ppEsc(chipTxt) + '</span></div><ul>' + lis + '</ul><div class="ppacts"></div>';
     const acts = el.querySelector('.ppacts');
     const wa = phoneWA(g.phone);
     if (!allRen) {
-      if (wa) {
-        const a = document.createElement('a'); a.className = 'btn small'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = allSent ? 'Avisar de nuevo por WhatsApp' : 'Avisar por WhatsApp';
+      if (pend.length && wa) {
+        const a = document.createElement('a'); a.className = 'btn small'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Avisar por WhatsApp';
         a.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(ppMsg(g));
-        a.addEventListener('click', () => { g.rows.forEach(r => ppPatch(r, { avisado: todayISO() })); markSentNow(a); setTimeout(() => { ppRenderList(); ppBadge(); }, 600); });
+        const nuevo = pend.map(r => [r, (r.n || 0) + 1]);   // valor fijo: tocar dos veces no suma dos avisos
+        a.addEventListener('click', () => { nuevo.forEach(x => ppPatch(x[0], { avisado: todayISO(), n: x[1] })); setTimeout(() => { ppRenderList(); ppBadge(); }, 600); });
         acts.appendChild(a);
-      } else { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Falta el teléfono'; acts.appendChild(c); }
-      if (allSent) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Volver a pendientes'; b.onclick = () => { if (!confirm('¿Volver a pendientes a ' + g.owner + '? Te va a aparecer de nuevo para avisar.')) return; g.rows.forEach(r => ppPatch(r, { avisado: '' })); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
-    }
-    if (!allRen) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Ya recargó'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { renovado: true })); ppRenderList(); ppBadge(); toast(g.owner + ': pasó a «Ya recargaron».'); }; acts.appendChild(b); }
-    else if (g.rows.some(r => r.renovado)) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'No recargó (volver a la lista)'; b.onclick = () => { g.rows.forEach(r => { if (r.renovado) ppPatch(r, { renovado: false }); }); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
+      } else if (pend.length) { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Falta el teléfono'; acts.appendChild(c); }
+      else if (g.rows.some(r => r.n > 0)) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Volver a pendientes'; b.onclick = () => { if (!confirm('¿Volver a pendientes a ' + g.owner + '? Va a aparecer de nuevo para avisarle.')) return; g.rows.forEach(r => { if (r.n > 0) ppPatch(r, { n: r.n - 1, avisado: r.n - 1 > 0 ? r.avisado : '' }); }); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
+      const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Ya recargó'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { renovado: true })); ppRenderList(); ppBadge(); toast(g.owner + ': pasó a «Ya recargaron».'); }; acts.appendChild(b);
+    } else if (g.rows.some(r => r.renovado)) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'No recargó (volver a la lista)'; b.onclick = () => { g.rows.forEach(r => { if (r.renovado) ppPatch(r, { renovado: false }); }); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
     box.appendChild(el);
   });
 }
 function ppBadge() {
-  const cur = ppCur(); const n = new Set(prev.filter(ppPending).map(p => ppKey(p) + '|' + p.venc)).size;
+  const mn = ppRounds(); const n = new Set(prev.filter(p => ppPending(p, mn)).map(p => ppKey(p) + '|' + p.venc)).size;
   const el = $('pp-badge'); if (el) el.textContent = n ? '(' + n + ')' : '';
 }
 function ppShow(which) {
@@ -1679,7 +1685,7 @@ function mergeRow(x) {
 /* ----- sincronización: primero se suben los cambios guardados, después se baja lo nuevo ----- */
 const isNetErr = e => !e || e.status === 0 || /fetch|network|timeout|load failed|jwt|token/i.test(String(e.message || ''));
 const PREV_OPS = { pins: 1, ppatch: 1, pdel: 1 };
-const isMissingTbl = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /clientes_previos/i.test(String(e.message || '')));
+const isMissingTbl = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || e.code === 'PGRST204' || e.code === '42703' || /avisos/i.test(String(e.message || '')) || /clientes_previos/i.test(String(e.message || '')));
 async function pushOutbox() {
   let i = 0;
   while (i < outbox.length) {
