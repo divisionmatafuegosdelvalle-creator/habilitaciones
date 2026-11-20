@@ -314,7 +314,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
       <div class="panel">
         <h2>Clientes del papel <span id="pp-count"></span></h2>
         <div class="grid">
-          <label>Mostrar<select id="pp-filter"><option value="avisar">Para avisar (vencidos y de este mes)</option><option value="proximo">Vencen el mes próximo</option><option value="enviados">Ya avisados</option><option value="todos">Todos</option></select></label>
+          <label>Mostrar<select id="pp-filter"><option value="avisar">Para avisar (vencidos y de este mes)</option><option value="proximo">Vencen el mes próximo</option><option value="enviados">Ya avisados</option><option value="recargaron">Ya recargaron</option><option value="todos">Todos</option></select></label>
           <label>Buscar<input id="pp-q" type="search" placeholder="Nombre, N° o teléfono" autocomplete="off"></label>
         </div>
         <div id="pp-list"></div>
@@ -442,7 +442,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.10</p>
+  <p class="hint">Versión 4.11</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -1216,6 +1216,7 @@ function noticeGroups() {
   const now = Date.now(), map = {};
   hist.forEach(r => {
     if (r.anulada) return; const n = noticeOf(r, now); if (!n.due) return;
+    if (hist.some(h => h !== r && !h.anulada && h.emision > r.emision && ppKey({ phone: h.phone, owner: h.owner }) === ppKey({ phone: r.phone, owner: r.owner }) && ppNum(h.number) === ppNum(r.number))) return;
     const key = (phoneWA(r.phone) || r.owner) + '|' + n.due;
     (map[key] = map[key] || { n: n.due, recs: [], phone: r.phone, owner: r.owner }).recs.push({ r, v: n.v, st: n.st });
   });
@@ -1402,14 +1403,24 @@ function ppRenewed(p) {
   const last = ymIdx(p.venc) - 12, k = ppKey(p);
   return hist.some(h => !h.anulada && ymIdx(String(h.emision).slice(0, 7)) > last && ppKey({ phone: h.phone, owner: h.owner }) === k && (!p.number || ppNum(h.number) === ppNum(p.number)));
 }
+// pendiente: no recargó, venció o vence este mes, y todavía no se le avisó en la tanda de hoy (1.ª: desde avD1, 2.ª: desde avD2)
+function ppPending(p) {
+  const di = ymIdx(p.venc) - ppCur();
+  if (di > 0 || ppRenewed(p)) return false;
+  if (!p.avisado) return true;
+  if (di < 0) return false;
+  const t = artNow(Date.now()), start = t.d >= settings.avD2 ? settings.avD2 : t.d >= settings.avD1 ? settings.avD1 : 1;
+  return p.avisado < t.y + '-' + pad(t.m) + '-' + pad(start);
+}
 function ppGroups() {
   const cur = ppCur(), q = foldTxt(ppQuery), qd = ppQuery.replace(/\D/g, ''), map = {};
   prev.forEach(p => {
     const ren = ppRenewed(p), di = ymIdx(p.venc) - cur;
     if (q) { if (!(foldTxt(p.owner).includes(q) || foldTxt(p.number).includes(q) || (qd.length >= 3 && String(p.phone).replace(/\D/g, '').includes(qd)))) return; }
-    else if (ppFilter === 'avisar') { if (ren || p.avisado || di > 0) return; }
+    else if (ppFilter === 'avisar') { if (!ppPending(p)) return; }
     else if (ppFilter === 'proximo') { if (ren || di !== 1) return; }
-    else if (ppFilter === 'enviados') { if (!p.avisado) return; }
+    else if (ppFilter === 'enviados') { if (!p.avisado || ren) return; }
+    else if (ppFilter === 'recargaron') { if (!ren) return; }
     const key = ppKey(p) + '|' + p.venc;
     (map[key] = map[key] || { owner: p.owner, phone: p.phone, venc: p.venc, rows: [] }).rows.push(p);
     if (!map[key].phone && p.phone) map[key].phone = p.phone;
@@ -1438,19 +1449,22 @@ function ppRenderList() {
     el.innerHTML = '<div class="row static" style="padding:0;border:0"><div class="t"><b>' + ppEsc(g.owner) + '</b><span>' + ppEsc(g.phone || 'Sin teléfono') + ' · ' + g.rows.length + (g.rows.length === 1 ? ' matafuego' : ' matafuegos') + '</span></div><span class="chip ' + chipCls + '">' + ppEsc(chipTxt) + '</span></div><ul>' + lis + '</ul><div class="ppacts"></div>';
     const acts = el.querySelector('.ppacts');
     const wa = phoneWA(g.phone);
-    if (allSent) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Volver a pendientes'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { avisado: '' })); ppRenderList(); }; acts.appendChild(b); }
-    else if (wa) {
-      const a = document.createElement('a'); a.className = 'btn small'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Avisar por WhatsApp';
-      a.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(ppMsg(g));
-      a.addEventListener('click', () => { g.rows.forEach(r => ppPatch(r, { avisado: todayISO() })); setTimeout(() => { ppRenderList(); ppBadge(); }, 600); });
-      acts.appendChild(a);
-    } else { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Falta el teléfono'; acts.appendChild(c); }
-    if (!allRen) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Ya recargó'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { renovado: true })); ppRenderList(); ppBadge(); toast(g.owner + ': marcado como recargado.'); }; acts.appendChild(b); }
+    if (!allRen) {
+      if (wa) {
+        const a = document.createElement('a'); a.className = 'btn small'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = allSent ? 'Avisar de nuevo por WhatsApp' : 'Avisar por WhatsApp';
+        a.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(ppMsg(g));
+        a.addEventListener('click', () => { g.rows.forEach(r => ppPatch(r, { avisado: todayISO() })); setTimeout(() => { ppRenderList(); ppBadge(); }, 600); });
+        acts.appendChild(a);
+      } else { const c = document.createElement('span'); c.className = 'chip porvencer'; c.textContent = 'Falta el teléfono'; acts.appendChild(c); }
+      if (allSent) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Volver a pendientes'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { avisado: '' })); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
+    }
+    if (!allRen) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Ya recargó'; b.onclick = () => { g.rows.forEach(r => ppPatch(r, { renovado: true })); ppRenderList(); ppBadge(); toast(g.owner + ': pasó a «Ya recargaron».'); }; acts.appendChild(b); }
+    else if (g.rows.some(r => r.renovado)) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'No recargó (volver a la lista)'; b.onclick = () => { g.rows.forEach(r => { if (r.renovado) ppPatch(r, { renovado: false }); }); ppRenderList(); ppBadge(); }; acts.appendChild(b); }
     box.appendChild(el);
   });
 }
 function ppBadge() {
-  const cur = ppCur(); const n = new Set(prev.filter(p => !p.avisado && ymIdx(p.venc) <= cur && !ppRenewed(p)).map(p => ppKey(p) + '|' + p.venc)).size;
+  const cur = ppCur(); const n = new Set(prev.filter(ppPending).map(p => ppKey(p) + '|' + p.venc)).size;
   const el = $('pp-badge'); if (el) el.textContent = n ? '(' + n + ')' : '';
 }
 function ppShow(which) {
