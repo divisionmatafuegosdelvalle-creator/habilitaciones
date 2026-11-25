@@ -442,7 +442,7 @@ body.insp #insp-login-wrap, body.insp #v-panel, body.insp #libwarn { display: no
   <p id="login-err" class="err" role="alert"></p>
   <button id="login-go" class="primary">Entrar</button>
   <p class="hint">Usuarios del taller. Si sos cliente o inspector, escaneá el QR de la habilitación con la cámara del teléfono.</p>
-  <p class="hint">Versión 4.14</p>
+  <p class="hint">Versión 4.15</p>
 </div></div>
 <div id="pending" class="overlay" hidden><div class="box">
   <h2>Falta autorización</h2>
@@ -1437,7 +1437,7 @@ function ppMsg(g) {
   const di = ymIdx(g.venc) - ppCur(), nombre = g.owner.trim().toUpperCase(), n = g.rows.length;
   const est = di > 1 ? 'TU MATAFUEGOS VENCE PRONTO!' : di === 1 ? 'TU MATAFUEGOS VENCE EL MES PRÓXIMO!' : di === 0 ? 'TU MATAFUEGOS VENCE ESTE MES!' : 'TU MATAFUEGOS ESTÁ VENCIDO!';
   const est2 = n > 1 ? est.replace('TU MATAFUEGOS', 'TUS MATAFUEGOS').replace('VENCE', 'VENCEN').replace('ESTÁ', 'ESTÁN').replace('VENCIDO', 'VENCIDOS') : est;
-  return '⚠️HEY! ' + nombre + ' ' + est2 + '⚠️\n' + 'Division Matafuegos Del Valle. Horarios de Lun-Vier 9a13 -17a21hs Sab 9a13hs. ⚠️NUEVA DIRECCION!!!! \nLUIS BURELLA 8 CASI GUEMES ⚠️\n\nAbrí el enlace, activá el GPS y apretá el botón INICIAR, y te trae hasta el taller:\n' + PP_MAPA + '\n\nTE ESPERAMOS NUEVAMENTE!';
+  return '⚠️HEY! ' + nombre + ' ' + est2 + '⚠️\n' + 'Division Matafuegos Del Valle. Horarios de Lun-Vier 10a19hs Sab 9a13hs. ⚠️NUEVA DIRECCION!!!! \nLUIS BURELLA 8 CASI GUEMES ⚠️\n\nAbrí el enlace, activá el GPS y apretá el botón INICIAR, y te trae hasta el taller:\n' + PP_MAPA + '\n\nTE ESPERAMOS NUEVAMENTE!';
 }
 function ppRenderList() {
   const box = $('pp-list'), gs = ppGroups(), mn = ppRounds(); box.innerHTML = '';
